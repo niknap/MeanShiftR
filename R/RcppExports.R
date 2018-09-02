@@ -36,7 +36,3 @@ MeanShift_Voxels <- function(pc, H2CW_fac, H2CL_fac, UniformKernel = FALSE, MaxI
     .Call('_MeanShiftR_MeanShift_Voxels', PACKAGE = 'MeanShiftR', pc, H2CW_fac, H2CL_fac, UniformKernel, MaxIter, maxx, maxy, maxz)
 }
 
-rcpp_hello <- function() {
-    .Call('_MeanShiftR_rcpp_hello', PACKAGE = 'MeanShiftR')
-}
-
