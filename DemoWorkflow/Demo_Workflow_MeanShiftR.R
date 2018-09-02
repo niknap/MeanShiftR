@@ -1,7 +1,8 @@
-############################################################################################
+################################################################################################
 # Demonstration workflow for individual tree crown delineation from a point cloud using the
-# adaptive mean shift 3D algorithm (AMS3D) implemented in MeanShiftR package
-############################################################################################
+# adaptive mean shift 3D algorithm (AMS3D; Ferraz et al. 2016) implemented in MeanShiftR package
+# Contact: nikolai.knapp@ufz.de
+################################################################################################
 
 #############
 # Preparation
@@ -117,8 +118,12 @@ plot(ellipses.spdf@data$TreeH ~ ellipses.spdf@data$DBH, xlab="DBH (m)", ylab="Tr
 ellipses.spdf@data$MeanCrownDiameter <- 2 * ellipses.spdf@data$MeanRadius
 plot(ellipses.spdf@data$MeanCrownDiameter ~ ellipses.spdf@data$DBH, xlab="DBH (m)", ylab="Crown diameter (m)")
 
-
-
+################################################################
+# Reference:
+# Ferraz, A., Saatchi, S., Mallet, C. and Meyer, V. (2016).
+# Lidar detection of individual tree size in tropical forests.
+# Remote Sensing of Environment. 183. p.pp. 318-333.
+################################################################
 
 
 
