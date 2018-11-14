@@ -18,10 +18,14 @@ split_BufferedPointCloud <- function(pc.dt, plot.width, buffer.width){
   # Convert to data.table
   pc.dt <- data.table(pc.dt)
 
-  # Calculate spatial indices for small subplots
-  if(is.data.table(pc.dt)){pc.dt[, sBPC_SpatID := calc_SpatialIndex(xcor=X, ycor=Y, res=plot.width)]}
+  # Calculate the absolute lower left corner of the point cloud
+  abs.llX <- round_any(min(pc.dt$X, na.rm=T), accuracy=plot.width, f=floor)
+  abs.llY <- round_any(min(pc.dt$Y, na.rm=T), accuracy=plot.width, f=floor)
 
-  # Calculate coordinates of the lower left plot corner
+  # Calculate spatial indices for small subplots
+  if(is.data.table(pc.dt)){pc.dt[, sBPC_SpatID := calc_SpatialIndex(xcor=X, ycor=Y, res=plot.width, minx=abs.llX, miny=abs.llY)]}
+
+  # Calculate coordinates of the lower left plot corners
   pc.dt[, sBPC_llX := round_any(X, accuracy=plot.width, f=floor)]
   pc.dt[, sBPC_llY := round_any(Y, accuracy=plot.width, f=floor)]
 
