@@ -8,11 +8,12 @@
 #' @param N.min Minimum number of points in a cluster to be considered as a tree crown
 #' @param Ext.min Minimum horizontal extent (in meters, in X- and Y-direction) of a cluster to be considered as a tree crown
 #' @param Ext.max Maximum horizontal extent (in meters, in X- and Y-direction) of a cluster to be considered as a tree crown
+#' @param proj4string Projection string of class CRS-class
 #' @return SpatialPolygonsDataFrame with each feature representing the crown projection area of one tree and columns containing various geometric attributes
 #' @keywords tree crown projection area polygons point cloud cluster convex hull ellipse circle perimeter
 #' @author Nikolai Knapp, nikolai.knapp@ufz.de
 
-make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ext.max=50){
+make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ext.max=50, proj4string=CRS(as.character(NA))){
 
   # type="convexhull"
   # N.min=20
@@ -52,7 +53,7 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
     for(i in 1:length(points.list)){
       my.points.dt <- points.list[[i]]
       # Make a SpatialPointsDataFrame from all points
-      my.points.spdf <- SpatialPointsDataFrame(coords=cbind(X=my.points.dt$X, Y=my.points.dt$Y), data=my.points.dt)
+      my.points.spdf <- SpatialPointsDataFrame(coords=cbind(X=my.points.dt$X, Y=my.points.dt$Y), data=my.points.dt, proj4string=proj4string)
       # Collect attributes
       my.ID <- my.points.spdf$ID[1]
       my.CentroidX <- mean(my.points.spdf$X, na.rm=T)
@@ -64,7 +65,7 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
       hull.list[[i]] <- SpatialPolygonsDataFrame(hull.list[[i]], data=data.frame(ID=my.ID, CentroidX=my.CentroidX, CentroidY=my.CentroidY, CentroidZ=my.CentroidZ, TreeH=my.TreeH, NPoints=my.NPoints))
     }
     # Bind all list elements together in one SpatialPolygonsDataFrame
-    hull.spdf <- do.call(bind, hull.list)
+    hull.spdf <- do.call(raster::bind, hull.list)
     # Calculate area and perimeter of each polygon
     hull.spdf$ConvexHullArea <- gArea(hull.spdf, byid=T)
     hull.spdf$ConvexHullPerimeter <- gLength(hull.spdf, byid=T)
@@ -77,7 +78,7 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
     for(i in 1:length(points.list)){
       my.points.dt <- points.list[[i]]
       # Make a SpatialPointsDataFrame from all points
-      my.points.spdf <- SpatialPointsDataFrame(coords=cbind(X=my.points.dt$X, Y=my.points.dt$Y), data=my.points.dt)
+      my.points.spdf <- SpatialPointsDataFrame(coords=cbind(X=my.points.dt$X, Y=my.points.dt$Y), data=my.points.dt, proj4string=proj4string)
       # Collect attributes
       my.ID <- my.points.spdf$ID[1]
       my.CentroidX <- mean(my.points.spdf$X, na.rm=T)
@@ -117,7 +118,7 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
     # Convert polygons to spatial polygons
     sps <- SpatialPolygons(ps.list)
     # Bind all list elements together in one data.table
-    ellipse.dt <- do.call(bind, ellipse.list)
+    ellipse.dt <- do.call(raster::bind, ellipse.list)
     # Convert them to a spatial polygon dataframe
     ellipse.spdf <- SpatialPolygonsDataFrame(sps, data=ellipse.dt)
     # Calculate area and perimeter of each polygon
@@ -149,16 +150,16 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
       CircleCenterY <- circle$y
       CircleRadius <- circle$radius
       # Make the center a spatial object
-      CircleCenter.sp <- SpatialPoints(coords=data.frame(X=CircleCenterX, Y=CircleCenterY))
+      CircleCenter.sp <- SpatialPoints(coords=data.frame(X=CircleCenterX, Y=CircleCenterY), proj4string=proj4string)
       # Create the circle polygon
       ps.list[[i]] <- gBuffer(CircleCenter.sp, width=CircleRadius, quadsegs=15)
       circle.list[[i]] <- data.frame(ID=my.ID, CentroidX=my.CentroidX, CentroidY=my.CentroidY, CentroidZ=my.CentroidZ, TreeH=my.TreeH, NPoints=my.NPoints,
                                      CircleCenterX=CircleCenterX, CircleCenterY=CircleCenterY, Radius=CircleRadius)
     }
     # Bind all list elements together in one data.table
-    circle.dt <- do.call(bind, circle.list)
+    circle.dt <- do.call(raster::bind, circle.list)
     # Bind all list elements together in one SpatialPolygonsDataFrame.
-    circle.spdf <- do.call(bind, ps.list)
+    circle.spdf <- do.call(raster::bind, ps.list)
     # Convert them to a spatial polygon dataframe
     circle.spdf <- SpatialPolygonsDataFrame(circle.spdf, data=circle.dt)
     # Calculate area and perimeter of each polygon
