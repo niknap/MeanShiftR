@@ -1,7 +1,7 @@
 Package: MeanShiftR
 Type: Package
 Title: Tree delineation from lidar using mean shift clustering
-Version: 0.1.0
+Version: 0.1.1
 Author: Nikolai Knapp
 Maintainer: Nikolai Knapp <nikolai.knapp@ufz.de>
 Description: The package allows individual tree crown delineation (ITCD) from 
@@ -23,6 +23,7 @@ Depends:
     Rcpp (>= 0.12.9),
     rgeos,
     sp,
-    tripack
+    tripack,
+    raster
 LinkingTo: Rcpp
 RoxygenNote: 6.0.1
