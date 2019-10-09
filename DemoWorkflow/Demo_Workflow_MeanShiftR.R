@@ -10,10 +10,10 @@
 
 # Load required packages
 .libPaths()
-require(MeanShiftR)
+library(MeanShiftR) 
 
 # Read and inspect example data
-require(repmis)
+library(repmis)
 source_data("https://github.com/niknap/MeanShiftR/blob/master/DemoWorkflow/Demo_Data_1ha_Traunstein.rda?raw=True")
 head(lid.dt)
 head(inv.dt)
@@ -22,8 +22,8 @@ nrow(inv.dt)
 
 # Display the point cloud (requires function from slidaRtools package available here: https://github.com/niknap/slidaRtools;
 # alternatively use the rgl::plot3d function to write your custom 3D plotting code)
-require(slidaRtools)
-slidaRtools::display.point.cloud.dt(lid.dt, size=2)
+#require(slidaRtools)
+#slidaRtools::display.point.cloud.dt(lid.dt, size=2)
 
 ####################################
 # Data splitting for parallelization

@@ -1,0 +1,77 @@
+---
+title: "Crown Deliniation with lidR data"
+author: "Ben Weinstein"
+date: "`r Sys.Date()`"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Vignette Title}
+  %\VignetteEngine{knitr::rmarkdown}
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r setup, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>",
+  warning=FALSE,
+  message=FALSE
+)
+```
+
+# Load Data
+```{r}
+library(MeanShiftR)
+library(lidR)
+library(raster)
+
+path_to_lidar_data<-system.file("extdata","SJER_057.laz",package="MeanShiftR")
+las<-readLAS(path_to_lidar_data)
+las
+```
+
+# View Canopy Height Model
+
+```{r,fig.height=5,fig.width=5}
+#view canopy height model
+chm <- grid_canopy(las, res = 0.5, p2r(0.3))
+ker <- matrix(1,3,3)
+chm <- focal(chm, w = ker, fun = mean, na.rm = TRUE)
+plot(chm)
+```
+
+# Crown Deliniation
+
+General workflow
+
+* Split point cloud into tiles (required for workflow, but less relevant in our toy example)
+
+* Run 3D point cloud
+
+```{r}
+#Split cloud
+lid.list <- split_BufferedPointCloud(pc.dt=las@data, plot.width=100, buffer.width=10)
+paste("Divided original point cloud into", length(lid.list), "data tables")
+
+#run meanshift
+system.time(clus.dt <- parallel_MeanShift(pc.list=lid.list, lib.path=.libPaths()[1], frac.cores=0.5, version="voxel",H2CW=0.3, H2CL=0.4, max.iter=20, buffer.width=10, minz=2, ctr.ac=2))
+
+# Why are there duplicates in the clus.dt object? Every row twice? 
+paste("There are" ,sum(duplicated(clus.dt))/nrow(clus.dt),"duplicates")
+
+#reassign to lidR object, rename to treeID for convienance, that's what lidR uses
+colnames(clus.dt)[10]<-"treeID"
+las@data<-merge(las@data,clus.dt[!duplicated(clus.dt),c("X","Y","Z","treeID")])
+lidR::plot(las,color="treeID")
+```
+
+Gather tree polygons to view on RGB data
+
+```{r,fig.height=6,fig.width=7}
+tree_polygons<-tree_hulls(las,type="bbox")
+path_to_rgb<-system.file("extdata","SJER_057.tif",package="MeanShiftR")
+rgb_image<-stack(path_to_rgb)
+plotRGB(rgb_image)
+plot(tree_polygons,add=T)
+```
+
