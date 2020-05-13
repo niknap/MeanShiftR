@@ -16,8 +16,9 @@ Description: The package allows individual tree crown delineation (ITCD) from
 License: GPL-3
 LazyData: TRUE
 Depends:
+    data.table
+Imports:
     cluster,
-    data.table,
     pbapply,
     plyr,
     Rcpp (>= 0.12.9),
@@ -26,4 +27,4 @@ Depends:
     tripack,
     raster
 LinkingTo: Rcpp
-RoxygenNote: 6.0.1
+RoxygenNote: 6.1.1

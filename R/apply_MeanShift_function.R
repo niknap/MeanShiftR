@@ -1,25 +1,28 @@
-#' Parallel application of mean shift clustering for individual tree crown delineation
+#' Application of mean shift clustering for individual tree crown delineation with option for parallel processing
 #'
-#' The function provides the frame work to apply the adaptive mean shift 3D (AMS3D) algorithm on several
+#' The function provides the framework to apply the adaptive mean shift 3D (AMS3D) algorithm on several
 #' sub point clouds of a large investigation area in parallel. It requires a list of sub point clouds as
 #' input and returns one large clustered point cloud as output. The input should have buffer zones around
 #' the focal areas. The buffer width should correspond to at least the maximal possible tree crown radius.
-#' @param pc.list List of point clouds in data.table format containing columns X, Y and Z (produced by split_BufferedPointCloud function)
+#' The function is also recommended for application of AMS3D on single point clouds without parallelization,
+#' because it takes care for point cloud pre- and postprocessing internally (e.g., handling the coordinate extent,
+#' assigning cluster IDs). This functionality is not provided when using the C++ functions (MeanShift_Classical and
+#' MeanShift_Voxels) directly.
+#' @param pc.list List of point clouds in data.table format containing columns X, Y and Z (produced by split_BufferedPointCloud function). Also for single point cloud input (unparallel mode) the input has to be a in list format (one-element list).
 #' @param lib.path String specifying the path from where to load the R packages. Should be set to .libPaths()[1].
 #' @param frac.cores Fraction of available cores to use for parallelization
 #' @param version of the AMS3D algorithm. Can be set to "classic" (slow but precise also with small trees) or "voxel" (fast but based on rounded coordinates of 1-m precision)
 #' @param H2CW Factor for the ratio of height to crown width. Determines kernel diameter based on its height above ground.
 #' @param H2CL Factor for the ratio of height to crown length. Determines kernel height based on its height above ground.
 #' @param max.iter Maximum number of iterations, i.e. steps that the kernel can move for each point. If centroid is not found after all iteration, the last position is assigned as centroid and the processing jumps to the next point
-#' @param buffer.width Width of the buffer around the core area in meters
 #' @param minz Minimum height above ground for a point to be considered in the analysis. Has to be > 0.
 #' @param ctr.ac Centroid accuracy. Specifies the rounding accuracy for centroid positions. After rounding all centroids with the same coordinates are considered to belong to one tree crown.
 #' @return data.table of point cloud with points labelled with tree IDs
 #' @keywords point cloud split buffer area plot subset parallel
 #' @author Nikolai Knapp, nikolai.knapp@ufz.de
 
-parallel_MeanShift <- function(pc.list, lib.path=NA, frac.cores=0.5, version="classic", H2CW=0.3, H2CL=0.4,
-                               max.iter=20, buffer.width=10, minz=2, ctr.ac=2){
+apply_MeanShift <- function(pc.list, lib.path=NA, run.parallel=T, frac.cores=0.5, version="classic", H2CW=0.3, H2CL=0.4,
+                            max.iter=20, minz=2, ctr.ac=2){
 
   # Package requirements
   # require(data.table, lib.loc=lib.path)
@@ -28,17 +31,20 @@ parallel_MeanShift <- function(pc.list, lib.path=NA, frac.cores=0.5, version="cl
   # require(pbapply, lib.loc=lib.path)
   # require(Rcpp, lib.loc=lib.path)
 
-  # Calculate the number of cores
-  N.cores <- parallel::detectCores()
-  # Initiate cluster
-  mycl <- parallel::makeCluster(N.cores*frac.cores)
-  # Prepare the environment on each child worker
-  parallel::clusterExport(cl=mycl, varlist=c("lib.path", "version", "H2CW", "H2CL", "max.iter", "buffer.width", "minz", "ctr.ac"), envir=environment())
-  parallel::clusterEvalQ(cl=mycl, .libPaths(new=lib.path))
-  parallel::clusterEvalQ(cl=mycl, require(data.table, lib.loc=lib.path))
-  parallel::clusterEvalQ(cl=mycl, require(plyr, lib.loc=lib.path))
-  parallel::clusterEvalQ(cl=mycl, require(Rcpp, lib.loc=lib.path))
-  parallel::clusterEvalQ(cl=mycl, require(MeanShiftR, lib.loc=lib.path))
+  # Prepare parallelization
+  if(run.parallel == T){
+    # Calculate the number of cores
+    N.cores <- parallel::detectCores()
+    # Initiate cluster
+    mycl <- parallel::makeCluster(N.cores*frac.cores)
+    # Prepare the environment on each child worker
+    parallel::clusterExport(cl=mycl, varlist=c("lib.path", "version", "H2CW", "H2CL", "max.iter", "minz", "ctr.ac"), envir=environment())
+    parallel::clusterEvalQ(cl=mycl, .libPaths(new=lib.path))
+    parallel::clusterEvalQ(cl=mycl, require(data.table, lib.loc=lib.path))
+    parallel::clusterEvalQ(cl=mycl, require(plyr, lib.loc=lib.path))
+    parallel::clusterEvalQ(cl=mycl, require(Rcpp, lib.loc=lib.path))
+    parallel::clusterEvalQ(cl=mycl, require(MeanShiftR, lib.loc=lib.path))
+  }
 
   # Wrapper function that runs mean shift and deals with buffers
   run.MeanShift <- function(my.dt){
@@ -69,7 +75,7 @@ parallel_MeanShift <- function(pc.list, lib.path=NA, frac.cores=0.5, version="cl
     my.mx <- as.matrix(my.dt)
     my.mx <- my.mx[, 1:3]
 
-    # Run the mean shift (two different versions)
+    # Run the mean shift (different versions)
     if(version=="classic"){
       cluster.df <- MeanShift_Classical(pc=my.mx, H2CW_fac=H2CW, H2CL_fac=H2CL, UniformKernel=F, MaxIter=max.iter)
     }else if(version=="voxel"){
@@ -99,20 +105,27 @@ parallel_MeanShift <- function(pc.list, lib.path=NA, frac.cores=0.5, version="cl
     return(cluster.dt)
   }
 
-  # Apply the mean shift wrapper function in parallel
-  #result.list <- parLapply(cl=mycl, X=pc.list, fun=run.MeanShift)
-
-  # Apply the mean shift wrapper function in parallel using pblapply to display a progress bar
-  result.list <- pbapply::pblapply(cl=mycl, X=pc.list, FUN=run.MeanShift)
-
-  # Bind all point clouds from the list in one large data.table
-  result.dt <- data.table::rbindlist(result.list)
+  # Apply the mean shift wrapper function
+  if(run.parallel == F){
+    # On single point cloud (unparallel)
+    result.dt <- run.MeanShift(pc.list[[1]])
+  }else{
+    # On list of point clouds in parallel using pblapply to display a progress bar
+    result.list <- pbapply::pblapply(cl=mycl, X=pc.list, FUN=run.MeanShift)
+    # Bind all point clouds from the list in one large data.table
+    result.dt <- data.table::rbindlist(result.list)
+  }
 
   # Assign IDs to each cluster based on the rounded coordinates
   result.dt[ , ID := .GRP, by = .(RoundCtrX, RoundCtrY, RoundCtrZ)]
 
+  # Count the number of points per cluster
+  result.dt[, NPoints := .N, by=ID]
+
   # Finish
-  parallel::stopCluster(mycl)
+  if(run.parallel == T){
+    parallel::stopCluster(mycl)
+  }
   return(result.dt)
 }
 

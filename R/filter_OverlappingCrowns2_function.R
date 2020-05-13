@@ -15,40 +15,50 @@
 #' @keywords tree crown projection area polygon overlap cluster artefact error double filter clean remove drop discard
 #' @author Nikolai Knapp, nikolai.knapp@ufz.de
 
-filter_OverlappingCrowns <- function(crowns, overlap.threshold){
+filter_OverlappingCrowns2 <- function(crowns, overlap.threshold=0.9){
 
   # Package requirements
   # require(rgeos)
+  # require(data.table)
+  # require(reshape2)
 
   # Create a boolean vector to label which crowns should be kept
   n.crowns <- nrow(crowns)
   keep.vec <- !logical(n.crowns)
+  # Sort crowns by ID
+  crowns <- crowns[order(crowns$ID),]
   # Store which pairs of polygons intersect
   intersection.mx <- rgeos::gIntersects(crowns, byid=T)
-  for(i in 1:n.crowns){
-    for(j in 1:n.crowns){
-      if(i != j & intersection.mx[i, j] == T){
-        # Derive an intersection polygon and calculate its area as a proportion of either of the two crowns
-        intersection.polygon <- rgeos::gIntersection(crowns[i,], crowns[j,], byid=T)
-        rel.intersection.i <- rgeos::gArea(intersection.polygon) / rgeos::gArea(crowns[i,])
-        rel.intersection.j <- rgeos::gArea(intersection.polygon) / rgeos::gArea(crowns[j,])
-        # Check if threshold is exceeded for both crowns
-        if(rel.intersection.i > overlap.threshold & rel.intersection.j > overlap.threshold){
-          # Label the lower crown for removal
-          head(crowns)
-          if(crowns@data[i, "TreeH"] >= crowns@data[j, "TreeH"]){
-            keep.vec[j] <- F
-          }else{
-            keep.vec[i] <- F
-          }
-        }
+  # Update the row and column names
+  rownames(intersection.mx) <- 1:nrow(crowns)
+  colnames(intersection.mx) <- 1:nrow(crowns)
+  # Melt the matrix into a table and keep only the intersecting pairs
+  intersection.dt <- data.table::data.table(reshape2::melt(intersection.mx))
+  setnames(intersection.dt, old=names(intersection.dt), new=c("Crown.i", "Crown.j", "Overlapping"))
+  intersection.dt <- subset(intersection.dt, Crown.i != Crown.j & Overlapping == T)
+  # Loop over all existing pairwise crown overlaps
+  for(my.row in 1:nrow(intersection.dt)){
+    #my.row <- 20
+    i <- intersection.dt[my.row, Crown.i]
+    j <- intersection.dt[my.row, Crown.j]
+    # Derive an intersection polygon and calculate its area as a proportion of either of the two crowns
+    intersection.polygon <- rgeos::gIntersection(crowns[i,], crowns[j,], byid=T)
+    rel.intersection.i <- rgeos::gArea(intersection.polygon) / rgeos::gArea(crowns[i,])
+    rel.intersection.j <- rgeos::gArea(intersection.polygon) / rgeos::gArea(crowns[j,])
+    # Check if threshold is exceeded for both crowns
+    if(rel.intersection.i > overlap.threshold & rel.intersection.j > overlap.threshold){
+      # Label the lower crown for removal
+      head(crowns)
+      if(crowns@data[i, "TreeH"] >= crowns@data[j, "TreeH"]){
+        keep.vec[j] <- F
+      }else{
+        keep.vec[i] <- F
       }
     }
   }
   crowns <- crowns[keep.vec, ]
   return(crowns)
 }
-
 
 
 

@@ -15,11 +15,13 @@
 match_CrownsStems <- function(crowns.spdf, stems.spdf, DBH.min=0.05){
 
   # Package requirements
-  require(rgeos)
-  require(sp)
+  # require(data.table)
+  # require(rgeos)
+  # require(sp)
+  # require(raster)
 
   # Calculate area of each polygon
-  Area.vec<- gArea(crowns.spdf, byid=T)
+  Area.vec<- rgeos::gArea(crowns.spdf, byid=T)
   # Sort the crowns for decreasing area
   crowns.spdf <- crowns.spdf[order(Area.vec, decreasing = T),]
 
@@ -38,12 +40,12 @@ match_CrownsStems <- function(crowns.spdf, stems.spdf, DBH.min=0.05){
   for(i in 1:nrow(crowns.spdf)){
     # i=41
     my.crown.spdf <- crowns.spdf[i, ]
-    my.crown.extent <- extent(my.crown.spdf)
+    my.crown.extent <- raster::extent(my.crown.spdf)
 
     # Find all stems that fall into the crown projection area
-    my.pot.stems.spdf <- crop(x=stems.spdf, y=my.crown.extent)
+    my.pot.stems.spdf <- raster::crop(x=stems.spdf, y=my.crown.extent)
     if(!is.null(my.pot.stems.spdf)){
-      over.spdf <- over(x=my.pot.stems.spdf, y=my.crown.spdf)
+      over.spdf <- sp::over(x=my.pot.stems.spdf, y=my.crown.spdf)
       my.pot.stems.spdf <- my.pot.stems.spdf[!is.na(over.spdf[, 1]),]
     }
 
@@ -55,7 +57,7 @@ match_CrownsStems <- function(crowns.spdf, stems.spdf, DBH.min=0.05){
     my.Y <- NA
     if(!is.null(my.pot.stems.spdf)){
       if(nrow(my.pot.stems.spdf) > 0){
-        my.pot.stems.dt <- data.table(my.pot.stems.spdf@data)
+        my.pot.stems.dt <- data.table::data.table(my.pot.stems.spdf@data)
         max.DBH <- max(my.pot.stems.dt$DBH)
         my.ID <- my.pot.stems.dt[DBH == max.DBH, TreeID]
         my.Species <- my.pot.stems.dt[DBH == max.DBH, Species]

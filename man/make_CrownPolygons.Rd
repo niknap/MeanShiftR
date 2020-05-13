@@ -4,8 +4,8 @@
 \alias{make_CrownPolygons}
 \title{Fit polygon hulls around tree crowns in a clustered point cloud to derive crown projection areas}
 \usage{
-make_CrownPolygons(pc.dt, type = "convexhull", N.min = 20, Ext.min = 2,
-  Ext.max = 50)
+make_CrownPolygons(pc.dt, type = "convexhull", N.min = 20,
+  Ext.min = 2, Ext.max = 50, proj4string = CRS(as.character(NA)))
 }
 \arguments{
 \item{pc.dt}{Point cloud in data.table format containing columns X, Y, Z and ID}
@@ -17,6 +17,8 @@ make_CrownPolygons(pc.dt, type = "convexhull", N.min = 20, Ext.min = 2,
 \item{Ext.min}{Minimum horizontal extent (in meters, in X- and Y-direction) of a cluster to be considered as a tree crown}
 
 \item{Ext.max}{Maximum horizontal extent (in meters, in X- and Y-direction) of a cluster to be considered as a tree crown}
+
+\item{proj4string}{Projection string of class CRS-class}
 }
 \value{
 SpatialPolygonsDataFrame with each feature representing the crown projection area of one tree and columns containing various geometric attributes

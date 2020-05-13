@@ -116,8 +116,8 @@ DataFrame MeanShift_Voxels(NumericMatrix pc, double H2CW_fac, double H2CL_fac, b
 
       IterCounter = IterCounter + 1;
       // Calculate cylinder dimensions based on point height
-      r = H2CW_fac * meanz * 0.5;
       d = H2CW_fac * meanz;
+      r = 0.5 * d;
       h = H2CL_fac * meanz;
 
       oldx = meanx;

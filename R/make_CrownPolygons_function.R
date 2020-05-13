@@ -22,13 +22,14 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
   # pc.dt=clus.dt
 
   # Package requirements
-  require(data.table)
-  require(sp)
-  require(rgeos)
-  require(cluster)
-  require(tripack)
+  # require(data.table)
+  # require(sp)
+  # require(rgeos)
+  # require(cluster)
+  # require(tripack)
+  # require(raster)
 
-  pc.dt <- data.table(pc.dt)
+  pc.dt <- data.table::data.table(pc.dt)
 
   # Count the returns per cluster
   pc.dt[, N := .N, by=ID]
@@ -53,22 +54,24 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
     for(i in 1:length(points.list)){
       my.points.dt <- points.list[[i]]
       # Make a SpatialPointsDataFrame from all points
-      my.points.spdf <- SpatialPointsDataFrame(coords=cbind(X=my.points.dt$X, Y=my.points.dt$Y), data=my.points.dt, proj4string=proj4string)
+      my.points.spdf <- sp::SpatialPointsDataFrame(coords=cbind(X=my.points.dt$X, Y=my.points.dt$Y), data=my.points.dt, proj4string=proj4string)
       # Collect attributes
       my.ID <- my.points.spdf$ID[1]
       my.CentroidX <- mean(my.points.spdf$X, na.rm=T)
       my.CentroidY <- mean(my.points.spdf$Y, na.rm=T)
       my.CentroidZ <- mean(my.points.spdf$Z, na.rm=T)
       my.TreeH <- max(my.points.spdf$Z, na.rm=T)
+      my.CrownBaseH <- min(my.points.spdf$Z, na.rm=T)
+      my.CrownLength <- my.TreeH - my.CrownBaseH
       my.NPoints <- my.points.spdf$N[1]
-      hull.list[[i]] <- gConvexHull(my.points.spdf)
-      hull.list[[i]] <- SpatialPolygonsDataFrame(hull.list[[i]], data=data.frame(ID=my.ID, CentroidX=my.CentroidX, CentroidY=my.CentroidY, CentroidZ=my.CentroidZ, TreeH=my.TreeH, NPoints=my.NPoints))
+      hull.list[[i]] <- rgeos::gConvexHull(my.points.spdf)
+      hull.list[[i]] <- sp::SpatialPolygonsDataFrame(hull.list[[i]], data=data.frame(ID=my.ID, CentroidX=my.CentroidX, CentroidY=my.CentroidY, CentroidZ=my.CentroidZ, TreeH=my.TreeH, CrownBaseH=my.CrownBaseH, CrownLength=my.CrownLength, NPoints=my.NPoints))
     }
     # Bind all list elements together in one SpatialPolygonsDataFrame
     hull.spdf <- do.call(raster::bind, hull.list)
     # Calculate area and perimeter of each polygon
-    hull.spdf$ConvexHullArea <- gArea(hull.spdf, byid=T)
-    hull.spdf$ConvexHullPerimeter <- gLength(hull.spdf, byid=T)
+    hull.spdf$ConvexHullArea <- rgeos::gArea(hull.spdf, byid=T)
+    hull.spdf$ConvexHullPerimeter <- rgeos::gLength(hull.spdf, byid=T)
     return(hull.spdf)
   } else if(type=="ellipse"){
     # Create a list to store the ellipse hulls
@@ -78,20 +81,23 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
     for(i in 1:length(points.list)){
       my.points.dt <- points.list[[i]]
       # Make a SpatialPointsDataFrame from all points
-      my.points.spdf <- SpatialPointsDataFrame(coords=cbind(X=my.points.dt$X, Y=my.points.dt$Y), data=my.points.dt, proj4string=proj4string)
+      my.points.spdf <- sp::SpatialPointsDataFrame(coords=cbind(X=my.points.dt$X, Y=my.points.dt$Y), data=my.points.dt, proj4string=proj4string)
       # Collect attributes
       my.ID <- my.points.spdf$ID[1]
       my.CentroidX <- mean(my.points.spdf$X, na.rm=T)
       my.CentroidY <- mean(my.points.spdf$Y, na.rm=T)
       my.CentroidZ <- mean(my.points.spdf$Z, na.rm=T)
       my.TreeH <- max(my.points.spdf$Z, na.rm=T)
+      my.TreeH <- max(my.points.spdf$Z, na.rm=T)
+      my.CrownBaseH <- min(my.points.spdf$Z, na.rm=T)
+      my.CrownLength <- my.TreeH - my.CrownBaseH
       my.NPoints <- my.points.spdf$N[1]
       # Combine the coordinates in a matrix
       my.points.mx <- as.matrix(cbind(my.points.spdf$X, my.points.spdf$Y))
       # Fit an ellipse around the data
-      ellipse <- ellipsoidhull(my.points.mx)
+      ellipse <- cluster::ellipsoidhull(my.points.mx)
       # Calculate border points of the ellipse
-      border.points <- predict(ellipse)
+      border.points <- cluster::predict.ellipsoid(ellipse)
       # Calculate the center of the ellipse
       center.point <- colMeans(border.points)
       names(center.point) <- c()
@@ -107,7 +113,8 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
       # Calculate a mean radius
       mean.radius <- mean(c(major.semi.axis, minor.semi.axis))
       # Collect ellipse attributes
-      ellipse.list[[i]] <- data.frame(ID=my.ID, CentroidX=my.CentroidX, CentroidY=my.CentroidY, CentroidZ=my.CentroidZ, TreeH=my.TreeH, NPoints=my.NPoints,
+      ellipse.list[[i]] <- data.frame(ID=my.ID, CentroidX=my.CentroidX, CentroidY=my.CentroidY, CentroidZ=my.CentroidZ, TreeH=my.TreeH,
+                                      CrownBaseH=my.CrownBaseH, CrownLength=my.CrownLength, NPoints=my.NPoints,
                                       EllipseCenterX=center.point[1], EllipseCenterY=center.point[2], MeanRadius=mean.radius,
                                       MinorSemiAxis=minor.semi.axis, MajorSemiAxis=major.semi.axis)
       # Make a polygon
@@ -116,14 +123,14 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
       ps.list[[i]] <- Polygons(list(p), ID=i)
     }
     # Convert polygons to spatial polygons
-    sps <- SpatialPolygons(ps.list)
+    sps <- sp::SpatialPolygons(ps.list)
     # Bind all list elements together in one data.table
     ellipse.dt <- do.call(raster::bind, ellipse.list)
     # Convert them to a spatial polygon dataframe
-    ellipse.spdf <- SpatialPolygonsDataFrame(sps, data=ellipse.dt)
+    ellipse.spdf <- sp::SpatialPolygonsDataFrame(sps, data=ellipse.dt)
     # Calculate area and perimeter of each polygon
-    ellipse.spdf$EllipseArea <- gArea(ellipse.spdf, byid=T)
-    ellipse.spdf$EllipsePerimeter <- gLength(ellipse.spdf, byid=T)
+    ellipse.spdf$EllipseArea <- rgeos::gArea(ellipse.spdf, byid=T)
+    ellipse.spdf$EllipsePerimeter <- rgeos::gLength(ellipse.spdf, byid=T)
     return(ellipse.spdf)
   } else if(type=="circle"){
     # Create a list to store the circle hulls
@@ -138,22 +145,25 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
       my.CentroidY <- mean(my.points.dt$Y, na.rm=T)
       my.CentroidZ <- mean(my.points.dt$Z, na.rm=T)
       my.TreeH <- max(my.points.dt$Z, na.rm=T)
+      my.CrownBaseH <- min(my.points.dt$Z, na.rm=T)
+      my.CrownLength <- my.TreeH - my.CrownBaseH
       my.NPoints <- my.points.dt$N[1]
       # Add some very small random noise to the coordinates to avoid errors with duplicate
       # coordinate combinations in the circumcircle function
       my.points.dt[, X := X + 0.01*(runif(nrow(my.points.dt))-0.5)]
       my.points.dt[, Y := Y + 0.01*(runif(nrow(my.points.dt))-0.5)]
       # Find the smallest circumcircle of the points
-      circle <- circumcircle(x=my.points.dt$X, y=my.points.dt$Y)
+      circle <- tripack::circumcircle(x=my.points.dt$X, y=my.points.dt$Y)
       # Extract center and radius of the circle
       CircleCenterX <- circle$x
       CircleCenterY <- circle$y
       CircleRadius <- circle$radius
       # Make the center a spatial object
-      CircleCenter.sp <- SpatialPoints(coords=data.frame(X=CircleCenterX, Y=CircleCenterY), proj4string=proj4string)
+      CircleCenter.sp <- sp::SpatialPoints(coords=data.frame(X=CircleCenterX, Y=CircleCenterY), proj4string=proj4string)
       # Create the circle polygon
-      ps.list[[i]] <- gBuffer(CircleCenter.sp, width=CircleRadius, quadsegs=15)
-      circle.list[[i]] <- data.frame(ID=my.ID, CentroidX=my.CentroidX, CentroidY=my.CentroidY, CentroidZ=my.CentroidZ, TreeH=my.TreeH, NPoints=my.NPoints,
+      ps.list[[i]] <- rgeos::gBuffer(CircleCenter.sp, width=CircleRadius, quadsegs=15)
+      circle.list[[i]] <- data.frame(ID=my.ID, CentroidX=my.CentroidX, CentroidY=my.CentroidY, CentroidZ=my.CentroidZ, TreeH=my.TreeH,
+                                     CrownBaseH=my.CrownBaseH, CrownLength=my.CrownLength, NPoints=my.NPoints,
                                      CircleCenterX=CircleCenterX, CircleCenterY=CircleCenterY, Radius=CircleRadius)
     }
     # Bind all list elements together in one data.table
@@ -161,10 +171,10 @@ make_CrownPolygons <- function(pc.dt, type="convexhull", N.min=20, Ext.min=2, Ex
     # Bind all list elements together in one SpatialPolygonsDataFrame.
     circle.spdf <- do.call(raster::bind, ps.list)
     # Convert them to a spatial polygon dataframe
-    circle.spdf <- SpatialPolygonsDataFrame(circle.spdf, data=circle.dt)
+    circle.spdf <- sp::SpatialPolygonsDataFrame(circle.spdf, data=circle.dt)
     # Calculate area and perimeter of each polygon
-    circle.spdf$CircleArea <- gArea(circle.spdf, byid=T)
-    circle.spdf$CirclePerimeter <- gLength(circle.spdf, byid=T)
+    circle.spdf$CircleArea <- rgeos::gArea(circle.spdf, byid=T)
+    circle.spdf$CirclePerimeter <- rgeos::gLength(circle.spdf, byid=T)
     return(circle.spdf)
   }
 }

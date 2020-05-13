@@ -4,8 +4,8 @@
 \alias{calc_SpatialIndex}
 \title{Calculate spatial indices for points in 2D space}
 \usage{
-calc_SpatialIndex(xcor, ycor, res = 1, minx = NA, miny = NA, maxx = NA,
-  maxy = NA, exclude.maxx = T)
+calc_SpatialIndex(xcor, ycor, res = 1, minx = NA, miny = NA,
+  maxx = NA, maxy = NA, exclude.maxx = T)
 }
 \arguments{
 \item{xcor}{X-coordinate of the point}
