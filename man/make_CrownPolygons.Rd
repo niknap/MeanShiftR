@@ -4,8 +4,14 @@
 \alias{make_CrownPolygons}
 \title{Fit polygon hulls around tree crowns in a clustered point cloud to derive crown projection areas}
 \usage{
-make_CrownPolygons(pc.dt, type = "convexhull", N.min = 20,
-  Ext.min = 2, Ext.max = 50, proj4string = CRS(as.character(NA)))
+make_CrownPolygons(
+  pc.dt,
+  type = "convexhull",
+  N.min = 20,
+  Ext.min = 2,
+  Ext.max = 50,
+  proj4string = CRS(as.character(NA))
+)
 }
 \arguments{
 \item{pc.dt}{Point cloud in data.table format containing columns X, Y, Z and ID}

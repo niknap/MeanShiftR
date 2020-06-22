@@ -35,4 +35,3 @@ MeanShift_Classical <- function(pc, H2CW_fac, H2CL_fac, UniformKernel = FALSE, M
 MeanShift_Voxels <- function(pc, H2CW_fac, H2CL_fac, UniformKernel = FALSE, MaxIter = 20L, maxx = 100L, maxy = 100L, maxz = 60L) {
     .Call('_MeanShiftR_MeanShift_Voxels', PACKAGE = 'MeanShiftR', pc, H2CW_fac, H2CL_fac, UniformKernel, MaxIter, maxx, maxy, maxz)
 }
-

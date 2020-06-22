@@ -4,9 +4,18 @@
 \alias{parallel_MeanShift}
 \title{Parallel application of mean shift clustering for individual tree crown delineation}
 \usage{
-parallel_MeanShift(pc.list, lib.path = NA, frac.cores = 0.5,
-  version = "classic", H2CW = 0.3, H2CL = 0.4, max.iter = 20,
-  buffer.width = 10, minz = 2, ctr.ac = 2)
+parallel_MeanShift(
+  pc.list,
+  lib.path = NA,
+  frac.cores = 0.5,
+  version = "classic",
+  H2CW = 0.3,
+  H2CL = 0.4,
+  max.iter = 20,
+  buffer.width = 10,
+  minz = 2,
+  ctr.ac = 2
+)
 }
 \arguments{
 \item{pc.list}{List of point clouds in data.table format containing columns X, Y and Z (produced by split_BufferedPointCloud function)}
