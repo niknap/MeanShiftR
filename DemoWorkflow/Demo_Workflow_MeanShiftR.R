@@ -24,6 +24,8 @@ nrow(inv.dt)
 # alternatively use the rgl::plot3d function to write your custom 3D plotting code)
 require(slidaRtools)
 slidaRtools::display.point.cloud.dt(lid.dt, size=2)
+display.point.cloud.dt(lid.dt, size=2)
+rm(display.point.cloud.dt)
 
 ####################################
 # Data splitting for parallelization
@@ -58,6 +60,9 @@ lid.list <- split_BufferedPointCloud(pc.dt=lid.dt, plot.width=100, buffer.width=
 length(lid.list)
 system.time(clus.dt <- parallel_MeanShift(pc.list=lid.list, lib.path=.libPaths()[1], frac.cores=0.5, version="voxel",
                                           H2CW=0.3, H2CL=0.4, max.iter=20, buffer.width=10, minz=2, ctr.ac=2))
+
+system.time(clus.dt <- apply_MeanShift(pc.list=lid.list, lib.path=.libPaths()[1], run.parallel=F, version="voxel",
+                                          H2CW=0.3, H2CL=0.4, max.iter=20, minz=2, ctr.ac=2))
 
 # Caution: The execution of the following code may take some time!!!
 # Apply the AMS3D in the slow "classic" version on one large 100-m tile (no parallelization)
